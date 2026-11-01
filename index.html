@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>发型图库 · AI 发型参考集 HAIR-DB-01</title>
+<style>
+:root{--bg:#0f1115;--card:#1a1e26;--fg:#e8ebf0;--muted:#8b93a1;--border:#2a3040;--accent:#4f8cff}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--fg);font:15px/1.6 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+header{padding:28px 24px 12px;max-width:1280px;margin:auto}
+h1{font-size:26px;font-weight:700}
+h1 .tag{font-size:12px;color:var(--muted);font-weight:400;margin-left:10px}
+.sub{color:var(--muted);margin-top:4px;font-size:14px}
+.toolbar{max-width:1280px;margin:18px auto 0;padding:0 24px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.search{flex:1;min-width:220px}
+input{width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--fg);font-size:15px;outline:none}
+input:focus{border-color:var(--accent)}
+.chip{background:var(--card);border:1px solid var(--border);color:var(--fg);border-radius:20px;padding:7px 16px;cursor:pointer;font-size:14px;transition:.15s}
+.chip:hover{border-color:var(--accent)}
+.chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.grid{max-width:1280px;margin:20px auto;padding:0 24px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:.15s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card img{width:100%;aspect-ratio:2/3;object-fit:cover;display:block;background:#222}
+.card .info{padding:10px 12px}
+.card .name{font-weight:600;font-size:14px}
+.card .meta{color:var(--muted);font-size:12px;margin-top:2px}
+.empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:60px 0}
+/* lightbox */
+.lb{position:fixed;inset:0;background:rgba(0,0,0,.88);display:none;z-index:100;align-items:center;justify-content:center}
+.lb.show{display:flex}
+.lb img{max-width:90vw;max-height:82vh;border-radius:8px}
+.lb .panel{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center}
+.lb a,.lb button{color:var(--fg);background:var(--card);border:1px solid var(--border);border-radius:7px;padding:8px 14px;text-decoration:none;font-size:14px;cursor:pointer}
+.lb a:hover,.lb button:hover{border-color:var(--accent)}
+footer{max-width:1280px;margin:30px auto 40px;padding:0 24px;color:var(--muted);font-size:13px;text-align:center}
+</style>
+</head>
+<body>
+<header>
+  <h1>发型图库 <span class="tag">HAIR-DB-01 · AI 生成 · 持续更新</span></h1>
+  <div class="sub">男女发型参考图集 · 纯 AI 生成概念发型 · 支持中英文检索 · 点击查看大图</div>
+</header>
+<div class="toolbar">
+  <div class="search"><input id="q" placeholder="搜索：背头 / 渐变 / bob / curly …"></div>
+  <button class="chip active" data-g="all">全部</button>
+  <button class="chip" data-g="male">男发</button>
+  <button class="chip" data-g="female">女发</button>
+</div>
+<div class="grid" id="grid"></div>
+<div class="lb" id="lb">
+  <img id="lbimg" alt="">
+  <div class="panel">
+    <span id="lbname" style="font-weight:600"></span>
+    <a id="lbdl" download>⬇ 下载原图</a>
+    <button onclick="lb.classList.remove('show')">✕ 关闭 (Esc)</button>
+  </div>
+</div>
+<footer>所有图像均为 AI 生成概念发型设计，非真实人物照片 · MIT 开源</footer>
+<script src="data.js"></script>
+<script>
+const ZH={ 'textured-crop':'纹理短盖头','buzz-cut':'圆寸/寸头','classic-pompadour':'经典背头','undercut-slick':'底切油头','middle-part':'中分窗帘头','wolf-cut':'狼尾剪','curly-top':'卷发顶区渐变','comb-over-fade':'斜梳硬线渐变','man-bun':'顶结丸子头','quiff':'飞机头/Quiff','bowl-cut':'蘑菇头','spiky-mohawk-lite':'短刺飞机头','long-flow':'中长后梳流','ash-gray':'烟灰染发','permed-middle':'韩式烫中分',
+'bob':'波波头','french-bob':'法式波波头','lob-collarbone':'锁骨发','wool-curls':'羊毛卷','hime-cut':'姬发式','high-ponytail':'高马尾','low-bun':'低发髻','pixie':'精灵短发','long-layers':'长发层次','butterfly':'蝴蝶剪','curtain-bangs':'八字刘海','shaggy-wolf':'狼剪碎发','ash-brown-wave':'灰棕大波浪','black-sleek':'黑直长发','short-wavy-bob':'短卷波波头',
+'back-45':'后侧45°','side':'正侧面','top-back':'后脑俯拍'};
+let G='all';
+const grid=document.getElementById('grid'),q=document.getElementById('q'),lb=document.getElementById('lb');
+function render(){
+  const kw=q.value.trim().toLowerCase();
+  const items=D.filter(d=>(G==='all'||d.gender===G)&&(!kw||(d.style+'/'+d.style_zh+'/'+d.keywords).toLowerCase().includes(kw)));
+  grid.innerHTML=items.length?items.map(d=>`
+    <div class="card" onclick="show('${d.id}')">
+      <img loading="lazy" src="${d.thumb}" alt="${d.style_zh}">
+      <div class="info"><div class="name">${d.style_zh} <span style="color:var(--muted);font-size:12px">${d.gender==='male'?'♂':'♀'}</span></div>
+      <div class="meta">${d.angle_zh} · ${d.style}</div></div>
+    </div>`).join(''):'<div class="empty">没有匹配的发型</div>';
+}
+function show(id){
+  const d=D.find(x=>x.id===id);if(!d)return;
+  lbimg.src=d.img;lbname.textContent=d.style_zh+' · '+d.angle_zh;lbdl.href=d.img;lb.classList.add('show');
+}
+document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));c.classList.add('active');G=c.dataset.g;render();});
+q.oninput=render;
+lb.onclick=e=>{if(e.target===lb)lb.classList.remove('show')};
+document.onkeydown=e=>{if(e.key==='Escape')lb.classList.remove('show')};
+render();
+</script>
+</body>
+</html>
