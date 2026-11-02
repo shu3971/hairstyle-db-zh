@@ -60,7 +60,13 @@ summary{cursor:pointer}
         <option value="gemini">Google Gemini（Nano Banana）</option>
         <option value="openai">OpenAI GPT Image</option>
         <option value="siliconflow">SiliconFlow（硅基流动）</option>
+        <option value="custom">⚙️ 自定义接口（OpenAI 兼容）</option>
       </select>
+      <div id="customBox" style="display:none">
+        <label>API Base URL</label>
+        <input type="text" id="baseurl" placeholder="https://your-gateway.com/v1">
+        <div class="note">填到 /v1 为止。兼容 OpenAI 协议的任意网关：OneAPI / NewAPI / 各类中转站 / 本地 Ollama 等。将调用 {base}/chat/completions（视觉模型）。</div>
+      </div>
       <label>API Key <span style="font-size:11px">仅存本机 localStorage，不上传</span></label>
       <input type="password" id="apikey" placeholder="粘贴你的 API Key">
       <label>模型</label>
@@ -112,6 +118,15 @@ function check(){$('go').disabled=!(faceImg&&hairSel&&!busy)}
 // ====== key 本地记忆 ======
 $('apikey').value=localStorage.getItem('hair_api_key')||'';
 $('apikey').oninput=e=>localStorage.setItem('hair_api_key',e.target.value);
+$('proto').value=localStorage.getItem('hair_proto')||'gemini';
+$('proto').onchange=e=>{
+  localStorage.setItem('hair_proto',e.target.value);
+  customBox.style.display=e.target.value==='custom'?'block':'none';
+  if(e.target.value==='custom')baseurl.value=localStorage.getItem('hair_baseurl')||'';
+  $('model').placeholder={gemini:'默认 gemini-2.5-flash-image',openai:'默认 gpt-image-1',siliconflow:'如 Qwen/Qwen-Image-Edit',custom:'必填,如 gpt-4o / qwen-vl-max'}[e.target.value];
+};
+$('baseurl').oninput=e=>localStorage.setItem('hair_baseurl',e.target.value);
+if($('proto').value==='custom'){customBox.style.display='block';baseurl.value=localStorage.getItem('hair_baseurl')||''}
 
 // ====== IndexedDB 历史 ======
 function idb(){return new Promise((res,rej)=>{const rq=indexedDB.open('hair-tryon',1);
@@ -142,6 +157,7 @@ async function generate(){
     let out;
     if(proto==='gemini')out=await genGemini(key,model);
     else if(proto==='openai')out=await genOpenAI(key,model);
+    else if(proto==='custom')out=await genCustom(key,model);
     else out=await genSilicon(key,model);
     showResult(out);
     saveHist({t:Date.now(),style:hairSel,proto,out});
@@ -179,6 +195,39 @@ async function genOpenAI(key,model){
   const j=await r.json();
   if(j.error)throw new Error(j.error.message);
   return j.data[0].url?j.data[0].url:'data:image/png;base64,'+j.data[0].b64_json;
+}
+async function genCustom(key,model){
+  const base=($('baseurl').value.trim()||'').replace(/\/+$/,'');
+  if(!base)throw new Error('自定义接口需填写 API Base URL');
+  if(!model)throw new Error('自定义接口需填写模型名');
+  const r=await fetch(base+'/chat/completions',{
+    method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${key}`},
+    body:JSON.stringify({model,messages:[{role:'user',content:[
+      {type:'text',text:buildPrompt()},
+      {type:'image_url',image_url:{url:faceImg}},
+      {type:'image_url',image_url:{url:await urlToDataURL(uniq.find(x=>x.style===hairSel).img)}},
+    ]}]}),
+  });
+  const j=await r.json();
+  if(j.error)throw new Error(j.error.message||JSON.stringify(j.error));
+  // 提取返回图片: 常见 3 种形态
+  const msg=j.choices?.[0]?.message;
+  // 1) markdown 里的图片 URL/base64
+  const text=msg?.content;
+  if(typeof text==='string'){
+    const m=text.match(/!\[[^\]]*\]\((https?:\/\/[^)]+|data:image\/[^)]+)\)/)||text.match(/(https?:\/\/\S+\.(?:png|jpe?g|webp)(?:\?\S*)?)/i);
+    if(m)return m[1].startsWith('data:')?m[1]:await urlToDataURL(m[1]);
+    // 2) 纯 base64
+    if(/^[\w+/=]{500,}$/.test(text.trim()))return 'data:image/png;base64,'+text.trim();
+    throw new Error('响应无图片: '+text.slice(0,150));
+  }
+  // 3) 多模态数组返回
+  if(Array.isArray(text)){
+    const imgc=text.find(c=>c.type==='image_url'||c.type==='image');
+    const u=imgc?.image_url?.url||imgc?.url||imgc?.data;
+    if(u)return u.startsWith('data:')?u:await urlToDataURL(u);
+  }
+  throw new Error('未能从响应解析出图片');
 }
 async function genSilicon(key,model){
   if(!model)throw new Error('SiliconFlow 需填写模型名，如 Qwen/Qwen-Image-Edit');
