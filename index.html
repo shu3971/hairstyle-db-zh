@@ -108,11 +108,16 @@ footer{max-width:1380px;margin:30px auto 40px;padding:0 24px;color:var(--muted);
     <span class="vartip" id="lbVars"></span>
     <a id="lbdl" download>⬇ 下载原图</a>
     <a class="trylink" id="lbTry" href="./tryon.html">💇 用这款试发型</a>
+    <button onclick="randomPick()">🎲 随机一款</button>
     <button onclick="lb.classList.remove('show')">✕ 关闭 (Esc)</button>
   </div>
 </div>
 
-<footer>所有图像均为 AI 生成概念发型设计，非真实人物照片 · MIT 开源</footer>
+<footer id="about">
+  <div style="max-width:720px;margin:0 auto">
+    <b style="color:var(--fg)">关于 HAIR-DB</b> · 本图库全部 801 张发型参考图由 AI 模型 <b>Z-imageT</b>（本地部署于作者 GPU）按统一 prompt 模板生成，无任何真实人物照片，不引用任何外部发型数据集（Figaro/K-Hairstyle 等因许可限制均未使用）。发型分类与中文命名由作者整理。全部代码与图片以 <b>MIT</b> 许可开源：<a href="https://github.com/shu3971/hairstyle-db-zh">GitHub 仓库</a>。反馈/合作请开 issue。
+  </div>
+</footer>
 
 <script src="data.js"></script>
 <script>
@@ -206,7 +211,7 @@ function showGroup(key){
   curGroup=GROUPS[key];if(!curGroup)return;
   const d=curGroup[0];
   document.getElementById('lbBig').innerHTML=curGroup.map(x=>
-    `<a href="${x.img}" target="_blank" title="${ZH_COLOR[x.color]||x.color} · ${ZH_ANGLE[x.angle]||x.angle}"><img src="${x.img}" alt=""></a>`).join('');
+    `<img src="${x.img}" style="cursor:zoom-in" onclick="zoomOne('${x.img}')" title="${ZH_COLOR[x.color]||x.color} · ${ZH_ANGLE[x.angle]||x.angle}" alt="">`).join('');
   document.getElementById('lbname').textContent=`${d.name}（${ZH_G[d.g]}）`;
   document.getElementById('lbVars').textContent=curGroup.length>1?`${curGroup.length} 个变体 · 点图放大`:'';
   document.getElementById('lbdl').href=d.img;
@@ -219,6 +224,61 @@ q.oninput=renderAll;
 document.getElementById('sort').onchange=renderGrid;
 lb.onclick=e=>{if(e.target===lb)lb.classList.remove('show')};
 document.onkeydown=e=>{if(e.key==='Escape')lb.classList.remove('show')};
+
+/* 站内二级放大灯箱(P2-8): 点大图不出站 */
+function zoomOne(src){
+  const z=document.createElement('div');
+  z.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.94);z-index:200;display:flex;align-items:center;justify-content:center;cursor:zoom-out';
+  z.innerHTML=`<img src="${src}" style="max-width:94vw;max-height:92vh;border-radius:8px">`;
+  z.onclick=()=>z.remove();
+  document.body.appendChild(z);
+  const esc=e=>{if(e.key==='Escape'){z.remove();document.removeEventListener('keydown',esc)}};
+  document.addEventListener('keydown',esc);
+}
+/* 随机一款(P2-6) */
+function randomPick(){
+  const k=CARDS[Math.floor(Math.random()*CARDS.length)].key;
+  showGroup(k);
+}
+
+/* ===== P1-4: 计数口径 = 款数+张数 ===== */
+const _origRenderFilters=renderFilters;
+renderFilters=function(){
+  _origRenderFilters();
+  const list=filtered();
+  const imgs=list.reduce((s,c)=>s+c.n,0);
+  document.getElementById('fcount').textContent=`共 ${D.length} 张 · 符合 ${list.length} 款 · ${imgs} 张`;
+};
+
+/* ===== P1-5: 重置清搜索框 ===== */
+const _origReset=resetFilters;
+resetFilters=function(){q.value='';F={g:'all',len:'all',color:'all',angle:'all'};renderAll()};
+
+/* ===== P2-7: Top10 轮播(左右箭头) ===== */
+const _origRenderTop10=renderTop10;
+renderTop10=function(){
+  _origRenderTop10();
+  const row=document.querySelector('.top10row');
+  if(!row)return;
+  row.style.scrollbarWidth='none';
+  row.style.cssText+=';scroll-behavior:smooth';
+  const h3=document.querySelector('.top10 h3');
+  const nav=document.createElement('span');
+  nav.style.cssText='float:right;cursor:pointer;user-select:none';
+  nav.innerHTML='<span id="tpL" style="margin-right:10px">←</span><span id="tpR">→</span>';
+  h3.appendChild(nav);
+  const step=row.clientWidth*0.6;
+  document.getElementById('tpL').onclick=()=>row.scrollBy({left:-step});
+  document.getElementById('tpR').onclick=()=>row.scrollBy({left:step});
+};
+
+/* URL 参数直通 tryon(P0-2 出站侧) */
+document.getElementById('lbTry').addEventListener('click',e=>{
+  if(curGroup&&curGroup[0]){
+    e.preventDefault();
+    location.href='./tryon.html?style='+encodeURIComponent(curGroup[0].style);
+  }
+});
 renderAll();
 </script>
 </body>

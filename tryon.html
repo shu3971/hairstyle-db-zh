@@ -74,6 +74,7 @@ summary{cursor:pointer}
       <label>补充要求（可选）</label>
       <textarea id="extra" placeholder="例如：只换发型，保持脸型、妆容和背景不变；侧面再染一点浅棕色"></textarea>
       <button class="go" id="go" disabled>✨ 生成试发效果</button>
+      <div class="note" id="keyHint" style="display:none;color:var(--err)">⚠️ 试发型需要自备 AI 生图 API Key（本机保存，不上传）。免费申请：Google AI Studio <a href="https://aistudio.google.com" target="_blank" style="color:var(--accent)">aistudio.google.com</a> 有免费额度，粘贴到上方 Key 即可。</div>
       <details>
         <summary>默认模型说明</summary>
         <div class="note">Gemini 默认 gemini-2.5-flash-image（即 Nano Banana）；OpenAI 默认 gpt-image-1；SiliconFlow 需填模型如 Qwen/Qwen-Image-Edit。Key 在各自平台申请：aistudio.google.com / platform.openai.com / siliconflow.cn</div>
@@ -92,12 +93,24 @@ let faceImg=null, hairSel=null, busy=false;
 const $=id=>document.getElementById(id);
 
 // ====== 发型列表 ======
-const uniq=[...new Map(D.map(d=>[d.style,d])).values()];
+const uniq=Object.values(D.reduce((acc,d)=>{
+  // 每款优先取 base 色作为代表图
+  if(!acc[d.style]||d.color==='base')acc[d.style]=d;
+  return acc;
+},{}));
 hairList.innerHTML=uniq.map(d=>`
-  <div class="hair-item" data-style="${d.style}" onclick="pickHair(this,'${d.style}')">
-    <img loading="lazy" src="${d.thumb}"><div class="n">${d.style_zh}</div>
+  <div class="hair-item" id="hi-${d.style}" data-style="${d.style}" onclick="pickHair(this,'${d.style}')">
+    <img loading="lazy" src="${d.thumb}"><div class="n">${d.name}</div>
   </div>`).join('');
 function pickHair(el,style){document.querySelectorAll('.hair-item').forEach(x=>x.classList.remove('sel'));el.classList.add('sel');hairSel=style;check();}
+
+// ====== URL 参数预选 (?style=xxx) ======
+(function(){
+  const s=new URLSearchParams(location.search).get('style');
+  if(!s)return;
+  const el=document.getElementById('hi-'+s);
+  if(el){pickHair(el,s);el.scrollIntoView({block:'center'});setTimeout(()=>el.scrollIntoView({block:'center'}),400)}
+})();
 
 // ====== 上传 ======
 const upbox=$('upbox'),faceFile=$('faceFile');
@@ -113,11 +126,15 @@ function loadFace(f){
   r.onload=()=>{faceImg=r.result;facePrev.src=faceImg;facePrev.style.display='block';upbox.textContent='✅ 已加载，点击可更换';check()};
   r.readAsDataURL(f);
 }
-function check(){$('go').disabled=!(faceImg&&hairSel&&!busy)}
+function check(){
+  const noKey=!$('apikey').value.trim();
+  $('go').disabled=!(faceImg&&hairSel&&!busy);
+  $('keyHint').style.display=(faceImg&&hairSel&&noKey)?'block':'none';
+}
 
 // ====== key 本地记忆 ======
 $('apikey').value=localStorage.getItem('hair_api_key')||'';
-$('apikey').oninput=e=>localStorage.setItem('hair_api_key',e.target.value);
+$('apikey').oninput=e=>{localStorage.setItem('hair_api_key',e.target.value);check()};
 $('proto').value=localStorage.getItem('hair_proto')||'gemini';
 $('proto').onchange=e=>{
   localStorage.setItem('hair_proto',e.target.value);
@@ -145,7 +162,7 @@ async function showBig(t){const db=await idb();const r=await new Promise(res=>{c
 const DEFAULTS={gemini:'gemini-2.5-flash-image',openai:'gpt-image-1',siliconflow:''};
 function buildPrompt(){
   const d=uniq.find(x=>x.style===hairSel);
-  return `Change ONLY the hairstyle of the person in the first image to match the hairstyle shown in the second reference image: ${d.style} (${d.keywords}). Keep the face, facial features, skin tone, expression, clothing and background exactly unchanged. Photorealistic result.`+($('extra').value.trim()?'\nAdditional: '+$('extra').value.trim():'');
+  return `Change ONLY the hairstyle of the person in the first image to match the hairstyle shown in the second reference image: ${d.name} (${d.style}). Keep the face, facial features, skin tone, expression, clothing and background exactly unchanged. Photorealistic result.`+($('extra').value.trim()?'\nAdditional: '+$('extra').value.trim():'');
 }
 async function generate(){
   busy=true;check();
