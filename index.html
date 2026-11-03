@@ -8,82 +8,218 @@
 :root{--bg:#0f1115;--card:#1a1e26;--fg:#e8ebf0;--muted:#8b93a1;--border:#2a3040;--accent:#4f8cff}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--fg);font:15px/1.6 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
-header{padding:28px 24px 12px;max-width:1280px;margin:auto}
-h1{font-size:26px;font-weight:700}
+a{color:var(--accent)}
+header{padding:24px 24px 10px;max-width:1380px;margin:auto}
+h1{font-size:25px;font-weight:700}
 h1 .tag{font-size:12px;color:var(--muted);font-weight:400;margin-left:10px}
 .sub{color:var(--muted);margin-top:4px;font-size:14px}
-.toolbar{max-width:1280px;margin:18px auto 0;padding:0 24px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.search{flex:1;min-width:220px}
+/* ===== 布局:侧栏 + 主区 ===== */
+.layout{max-width:1380px;margin:16px auto 0;padding:0 24px;display:flex;gap:18px;align-items:flex-start}
+.sidebar{width:230px;flex-shrink:0;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;position:sticky;top:16px}
+.main{flex:1;min-width:0}
+@media(max-width:860px){.layout{flex-direction:column}.sidebar{width:100%;position:static}}
+/* 侧栏筛选组 */
+.fgroup{margin-bottom:14px}
+.fgroup:last-child{margin-bottom:0}
+.fgroup .flabel{font-size:12px;color:var(--muted);margin-bottom:6px;letter-spacing:.5px}
+.fopts{display:flex;flex-wrap:wrap;gap:6px}
+.fopt{background:var(--bg);border:1px solid var(--border);color:var(--fg);border-radius:14px;padding:4px 12px;cursor:pointer;font-size:13px;transition:.15s}
+.fopt:hover{border-color:var(--accent)}
+.fopt.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.fcount{font-size:12px;color:var(--muted);margin-top:10px;border-top:1px solid var(--border);padding-top:10px}
+.reset{margin-top:8px;width:100%;background:transparent;border:1px dashed var(--border);color:var(--muted);border-radius:8px;padding:6px;cursor:pointer;font-size:12px}
+.reset:hover{color:var(--fg);border-color:var(--muted)}
+/* 工具栏 */
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.search{flex:1;min-width:200px}
 input{width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--fg);font-size:15px;outline:none}
 input:focus{border-color:var(--accent)}
-.chip{background:var(--card);border:1px solid var(--border);color:var(--fg);border-radius:20px;padding:7px 16px;cursor:pointer;font-size:14px;transition:.15s}
-.chip:hover{border-color:var(--accent)}
-.chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
-.grid{max-width:1280px;margin:20px auto;padding:0 24px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
-.card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:.15s}
+.sort{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--fg);font-size:14px;cursor:pointer;outline:none}
+/* Top10 横排 */
+.top10{margin-bottom:18px}
+.top10 h3{font-size:15px;margin-bottom:10px}
+.top10 h3 .fire{color:#ff6b4a}
+.top10row{display:flex;gap:10px;overflow-x:auto;padding-bottom:8px}
+.topcard{flex:0 0 130px;background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;cursor:pointer;transition:.15s;position:relative}
+.topcard:hover{border-color:var(--accent);transform:translateY(-2px)}
+.topcard .rank{position:absolute;top:6px;left:6px;background:rgba(0,0,0,.72);color:#ffb347;font-weight:700;font-size:12px;border-radius:6px;padding:2px 7px}
+.topcard img{width:100%;aspect-ratio:2/3;object-fit:cover;display:block}
+.topcard .tname{padding:6px 8px;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 网格 */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:.15s;position:relative}
 .card:hover{border-color:var(--accent);transform:translateY(-2px)}
 .card img{width:100%;aspect-ratio:2/3;object-fit:cover;display:block;background:#222}
-.card .info{padding:10px 12px}
-.card .name{font-weight:600;font-size:14px}
+.card .info{padding:9px 11px}
+.card .name{font-weight:600;font-size:14px;display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+.card .name .g{color:var(--muted);font-size:12px;flex-shrink:0}
 .card .meta{color:var(--muted);font-size:12px;margin-top:2px}
-.empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:60px 0}
-/* lightbox */
-.lb{position:fixed;inset:0;background:rgba(0,0,0,.88);display:none;z-index:100;align-items:center;justify-content:center}
+.card .badge{position:absolute;top:7px;right:7px;background:rgba(79,140,255,.92);color:#fff;font-size:11px;border-radius:6px;padding:2px 7px;font-weight:600}
+.empty{text-align:center;color:var(--muted);padding:60px 0;grid-column:1/-1}
+/* 分组标题 */
+.group-h{font-size:14px;color:var(--muted);margin:18px 0 10px;font-weight:600}
+/* lightbox + 同款聚合 */
+.lb{position:fixed;inset:0;background:rgba(0,0,0,.9);display:none;z-index:100;align-items:center;justify-content:center;flex-direction:column}
 .lb.show{display:flex}
-.lb img{max-width:90vw;max-height:82vh;border-radius:8px}
-.lb .panel{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center}
+.lb .big{display:flex;gap:14px;max-width:94vw;overflow-x:auto;padding:20px;align-items:center}
+.lb .big img{max-height:78vh;border-radius:8px}
+.lb .panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center;margin-bottom:20px;max-width:94vw}
 .lb a,.lb button{color:var(--fg);background:var(--card);border:1px solid var(--border);border-radius:7px;padding:8px 14px;text-decoration:none;font-size:14px;cursor:pointer}
 .lb a:hover,.lb button:hover{border-color:var(--accent)}
-footer{max-width:1280px;margin:30px auto 40px;padding:0 24px;color:var(--muted);font-size:13px;text-align:center}
+.lb .vartip{color:var(--muted);font-size:13px}
+.lb .trylink{background:var(--accent)!important;border-color:var(--accent)!important;color:#fff!important}
+footer{max-width:1380px;margin:30px auto 40px;padding:0 24px;color:var(--muted);font-size:13px;text-align:center}
 </style>
 </head>
 <body>
 <header>
   <h1>发型图库 <span class="tag">HAIR-DB-01 · AI 生成 · 持续更新</span></h1>
-  <div class="sub">男女发型参考图集 · 纯 AI 生成概念发型 · 支持中英文检索 · 点击查看大图 · <a href="./tryon.html" style="color:var(--accent)">💇 AI 试发型合成台</a></div>
+  <div class="sub">男女发型参考图集 · 纯 AI 生成概念发型 · 支持中英文检索 · 点击查看同款全变体 · <a href="./tryon.html">💇 AI 试发型合成台</a></div>
 </header>
-<div class="toolbar">
-  <div class="search"><input id="q" placeholder="搜索：背头 / 渐变 / bob / curly …"></div>
-  <button class="chip active" data-g="all">全部</button>
-  <button class="chip" data-g="male">男发</button>
-  <button class="chip" data-g="female">女发</button>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="fgroup"><div class="flabel">性别</div><div class="fopts" id="fGender"></div></div>
+    <div class="fgroup"><div class="flabel">发长</div><div class="fopts" id="fLen"></div></div>
+    <div class="fgroup"><div class="flabel">发色</div><div class="fopts" id="fColor"></div></div>
+    <div class="fgroup"><div class="flabel">视角</div><div class="fopts" id="fAngle"></div></div>
+    <div class="fcount" id="fcount"></div>
+    <button class="reset" onclick="resetFilters()">↺ 重置筛选</button>
+  </aside>
+
+  <div class="main">
+    <div class="toolbar">
+      <div class="search"><input id="q" placeholder="搜索：背头 / 渐变 / bob / curly …"></div>
+      <select class="sort" id="sort">
+        <option value="style">按发型分组</option>
+        <option value="hot">🔥 热门优先</option>
+        <option value="new">最新生成</option>
+      </select>
+    </div>
+    <div class="top10" id="top10" style="display:none"></div>
+    <div class="grid" id="grid"></div>
+  </div>
 </div>
-<div class="grid" id="grid"></div>
+
 <div class="lb" id="lb">
-  <img id="lbimg" alt="">
+  <div class="big" id="lbBig"></div>
   <div class="panel">
     <span id="lbname" style="font-weight:600"></span>
+    <span class="vartip" id="lbVars"></span>
     <a id="lbdl" download>⬇ 下载原图</a>
+    <a class="trylink" id="lbTry" href="./tryon.html">💇 用这款试发型</a>
     <button onclick="lb.classList.remove('show')">✕ 关闭 (Esc)</button>
   </div>
 </div>
+
 <footer>所有图像均为 AI 生成概念发型设计，非真实人物照片 · MIT 开源</footer>
+
 <script src="data.js"></script>
 <script>
-const ZH={ 'textured-crop':'纹理短盖头','buzz-cut':'圆寸/寸头','classic-pompadour':'经典背头','undercut-slick':'底切油头','middle-part':'中分窗帘头','wolf-cut':'狼尾剪','curly-top':'卷发顶区渐变','comb-over-fade':'斜梳硬线渐变','man-bun':'顶结丸子头','quiff':'飞机头/Quiff','bowl-cut':'蘑菇头','spiky-mohawk-lite':'短刺飞机头','long-flow':'中长后梳流','ash-gray':'烟灰染发','permed-middle':'韩式烫中分',
-'bob':'波波头','french-bob':'法式波波头','lob-collarbone':'锁骨发','wool-curls':'羊毛卷','hime-cut':'姬发式','high-ponytail':'高马尾','low-bun':'低发髻','pixie':'精灵短发','long-layers':'长发层次','butterfly':'蝴蝶剪','curtain-bangs':'八字刘海','shaggy-wolf':'狼剪碎发','ash-brown-wave':'灰棕大波浪','black-sleek':'黑直长发','short-wavy-bob':'短卷波波头',
-'back-45':'后侧45°','side':'正侧面','top-back':'后脑俯拍'};
-let G='all';
-const grid=document.getElementById('grid'),q=document.getElementById('q'),lb=document.getElementById('lb');
-function render(){
+/* ===== 常量映射 ===== */
+const ZH_LEN={'短':'短发','中':'中发','中长':'中长发','长':'长发'};
+const ZH_COLOR={base:'原色',black:'黑色',brown:'棕色',blonde:'金色',silver:'银灰'};
+const ZH_ANGLE={'back-45':'45°背面','side':'侧面','top-back':'后上'};
+const ZH_G={male:'♂ 男发',female:'♀ 女发'};
+/* Top10 人工精选经典款(后续可换真实点击统计) */
+const HOT=['classic-pompadour','wolf-cut','bob','buzz-cut','hush-cut','two-block','mermaid-wave','middle-part','man-bun','butterfly'];
+
+/* ===== 状态 ===== */
+let F={g:'all',len:'all',color:'all',angle:'all'};
+let curGroup=null; /* lightbox 当前发型组 */
+
+/* ===== 数据派生:同款聚合索引 ===== */
+function groupKey(d){return d.g+'|'+d.style}
+const GROUPS={};
+D.forEach(d=>{
+  const k=groupKey(d);
+  (GROUPS[k]=GROUPS[k]||[]).push(d);
+});
+/* 每组代表卡(取 base 色或第一张) + 变体数 */
+const CARDS=Object.entries(GROUPS).map(([k,arr])=>{
+  arr.sort((a,b)=>(a.color==='base'?-1:1)-(b.color==='base'?-1:1));
+  return {key:k,rep:arr[0],n:arr.length,arr};
+});
+
+/* ===== 侧栏筛选渲染 ===== */
+function buildOpts(id,values,zh,curKey){
+  const el=document.getElementById(id);
+  const all=[['all','全部']].concat([...new Set(values)].map(v=>[v,zh[v]||v]));
+  el.innerHTML=all.map(([v,label])=>
+    `<button class="fopt${F[curKey]===v?' active':''}" onclick="F.${curKey}='${v}';renderAll()">${label}</button>`).join('');
+}
+function renderFilters(){
+  const pool=D.filter(d=>(F.g==='all'||d.g===F.g));
+  buildOpts('fGender',['male','female'],ZH_G,'g');
+  buildOpts('fLen',pool.map(d=>d.len),ZH_LEN,'len');
+  buildOpts('fColor',pool.map(d=>d.color),ZH_COLOR,'color');
+  buildOpts('fAngle',pool.map(d=>d.angle),ZH_ANGLE,'angle');
+  document.getElementById('fcount').textContent=`共 ${D.length} 张 · 符合 ${filtered().length} 张`;
+}
+function filtered(){
   const kw=q.value.trim().toLowerCase();
-  const items=D.filter(d=>(G==='all'||d.gender===G)&&(!kw||(d.style+'/'+d.style_zh+'/'+d.keywords).toLowerCase().includes(kw)));
-  grid.innerHTML=items.length?items.map(d=>`
-    <div class="card" onclick="show('${d.id}')">
-      <img loading="lazy" src="${d.thumb}" alt="${d.style_zh}">
-      <div class="info"><div class="name">${d.style_zh} <span style="color:var(--muted);font-size:12px">${d.gender==='male'?'♂':'♀'}</span></div>
-      <div class="meta">${d.angle_zh} · ${d.style}</div></div>
-    </div>`).join(''):'<div class="empty">没有匹配的发型</div>';
+  return CARDS.filter(c=>{
+    const d=c.rep;
+    return (F.g==='all'||d.g===F.g)&&(F.len==='all'||d.len===F.len)
+      &&(F.color==='all'||c.arr.some(x=>x.color===F.color))
+      &&(F.angle==='all'||c.arr.some(x=>x.angle===F.angle))
+      &&(!kw||(d.style+'/'+d.name+'/'+(d.style_desc||'')).toLowerCase().includes(kw));
+  });
 }
-function show(id){
-  const d=D.find(x=>x.id===id);if(!d)return;
-  lbimg.src=d.img;lbname.textContent=d.style_zh+' · '+d.angle_zh;lbdl.href=d.img;lb.classList.add('show');
+function resetFilters(){F={g:'all',len:'all',color:'all',angle:'all'};renderAll()}
+
+/* ===== Top10 ===== */
+function renderTop10(){
+  const box=document.getElementById('top10');
+  const showIt=F.g==='all'&&F.len==='all'&&F.color==='all'&&F.angle==='all'&&!q.value.trim();
+  if(!showIt){box.style.display='none';return}
+  box.style.display='block';
+  const hot=HOT.map(s=>CARDS.find(c=>c.rep.style===s)).filter(Boolean).slice(0,10);
+  box.innerHTML=`<h3><span class="fire">🔥</span> 本周热门 Top 10</h3>
+    <div class="top10row">${hot.map((c,i)=>`
+      <div class="topcard" onclick="showGroup('${c.key}')">
+        <div class="rank">#${i+1}</div>
+        <img loading="lazy" src="${c.rep.thumb}" alt="">
+        <div class="tname">${c.rep.name}</div>
+      </div>`).join('')}</div>`;
 }
-document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));c.classList.add('active');G=c.dataset.g;render();});
-q.oninput=render;
+
+/* ===== 主网格 ===== */
+function renderGrid(){
+  const sort=document.getElementById('sort').value;
+  let list=filtered();
+  if(sort==='new')list=[...list].reverse();
+  if(sort==='hot')list=[...list].sort((a,b)=>HOT.indexOf(b.rep.style)-HOT.indexOf(a.rep.style));
+  document.getElementById('grid').innerHTML=list.length?list.map(c=>{
+    const d=c.rep;
+    return `<div class="card" onclick="showGroup('${c.key}')">
+      ${c.n>1?`<div class="badge">${c.n} 张</div>`:''}
+      <img loading="lazy" src="${d.thumb}" alt="${d.name}">
+      <div class="info"><div class="name"><span>${d.name}</span><span class="g">${ZH_G[d.g]}</span></div>
+      <div class="meta">${ZH_LEN[d.len]||d.len} · ${ZH_COLOR[d.color]||d.color}${c.n>1?` · ${c.n} 个变体`:''}</div></div>
+    </div>`}).join(''):'<div class="empty">没有匹配的发型，试试重置筛选</div>';
+}
+function renderAll(){renderFilters();renderTop10();renderGrid()}
+
+/* ===== Lightbox: 同款全变体 ===== */
+function showGroup(key){
+  curGroup=GROUPS[key];if(!curGroup)return;
+  const d=curGroup[0];
+  document.getElementById('lbBig').innerHTML=curGroup.map(x=>
+    `<a href="${x.img}" target="_blank" title="${ZH_COLOR[x.color]||x.color} · ${ZH_ANGLE[x.angle]||x.angle}"><img src="${x.img}" alt=""></a>`).join('');
+  document.getElementById('lbname').textContent=`${d.name}（${ZH_G[d.g]}）`;
+  document.getElementById('lbVars').textContent=curGroup.length>1?`${curGroup.length} 个变体 · 点图放大`:'';
+  document.getElementById('lbdl').href=d.img;
+  lb.classList.add('show');
+}
+
+/* ===== 事件 ===== */
+const grid=document.getElementById('grid'),q=document.getElementById('q'),lb=document.getElementById('lb');
+q.oninput=renderAll;
+document.getElementById('sort').onchange=renderGrid;
 lb.onclick=e=>{if(e.target===lb)lb.classList.remove('show')};
 document.onkeydown=e=>{if(e.key==='Escape')lb.classList.remove('show')};
-render();
+renderAll();
 </script>
 </body>
 </html>
