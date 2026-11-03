@@ -61,9 +61,13 @@ input:focus{border-color:var(--accent)}
 /* lightbox + 同款聚合 */
 .lb{position:fixed;inset:0;background:rgba(0,0,0,.9);display:none;z-index:100;align-items:center;justify-content:center;flex-direction:column}
 .lb.show{display:flex}
-.lb .big{display:flex;gap:14px;max-width:94vw;overflow-x:auto;padding:20px;align-items:center}
-.lb .big img{max-height:78vh;border-radius:8px}
-.lb .panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center;margin-bottom:20px;max-width:94vw}
+.lb .big{display:flex;gap:14px;max-width:94vw;overflow-x:auto;padding:20px;align-items:center;scrollbar-width:none}
+.lb .big::-webkit-scrollbar{display:none}
+/* P1-2(二轮): 工具栏在弹窗顶部 */
+.lb{flex-direction:column-reverse}
+.lb .panel{margin:20px 0}
+.lb .big img{max-height:70vh;border-radius:8px}
+.lb .panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:94vw}
 .lb a,.lb button{color:var(--fg);background:var(--card);border:1px solid var(--border);border-radius:7px;padding:8px 14px;text-decoration:none;font-size:14px;cursor:pointer}
 .lb a:hover,.lb button:hover{border-color:var(--accent)}
 .lb .vartip{color:var(--muted);font-size:13px}
@@ -74,7 +78,7 @@ footer{max-width:1380px;margin:30px auto 40px;padding:0 24px;color:var(--muted);
 <body>
 <header>
   <h1>发型图库 <span class="tag">HAIR-DB-01 · AI 生成 · 持续更新</span></h1>
-  <div class="sub">男女发型参考图集 · 纯 AI 生成概念发型 · 支持中英文检索 · 点击查看同款全变体 · <a href="./tryon.html">💇 AI 试发型合成台</a></div>
+  <div class="sub" id="stats">男女发型参考图集 · 纯 AI 生成概念发型 · 点击查看同款全变体 · <a href="./tryon.html">💇 AI 试发型合成台</a></div>
 </header>
 
 <div class="layout">
@@ -97,6 +101,7 @@ footer{max-width:1380px;margin:30px auto 40px;padding:0 24px;color:var(--muted);
       </select>
     </div>
     <div class="top10" id="top10" style="display:none"></div>
+    <div class="top10" id="feature" style="display:none"></div>
     <div class="grid" id="grid"></div>
   </div>
 </div>
@@ -124,10 +129,41 @@ footer{max-width:1380px;margin:30px auto 40px;padding:0 24px;color:var(--muted);
 /* ===== 常量映射 ===== */
 const ZH_LEN={'短':'短发','中':'中发','中长':'中长发','长':'长发'};
 const ZH_COLOR={base:'原色',black:'黑色',brown:'棕色',blonde:'金色',silver:'银灰'};
-const ZH_ANGLE={'back-45':'45°背面','side':'侧面','top-back':'后上'};
+const ZH_ANGLE={'back-45':'45°背面','side':'侧面','top-back':'后上','front':'正面'};
 const ZH_G={male:'♂ 男发',female:'♀ 女发'};
-/* Top10 人工精选经典款(后续可换真实点击统计) */
+/* Top10 人工精选经典款兜底(002M-1: 真实点击次数>0 时覆盖) */
 const HOT=['classic-pompadour','wolf-cut','bob','buzz-cut','hush-cut','two-block','mermaid-wave','middle-part','man-bun','butterfly'];
+/* 002M-6: 每周精选(主题→款式列表,按周轮换) */
+const FEATURES=[
+  {week:'2026-W45', theme:'秋冬短发周', styles:['bob','french-bob','pixie','buzz-cut','crew-cut','textured-crop','hush-cut','wet-bob']},
+  {week:'2026-W46', theme:'韩系氛围周', styles:['two-block','comma-hair','korean-perm','hush-cut','jelly-perm','curtain-long','korean-pony','mermaid-wave']},
+];
+
+/* ===== 002M-1: 点击热度(localStorage, 设备每天每款一次) ===== */
+function heat(){
+  try{
+    const t=new Date().toISOString().slice(0,10);
+    const s=JSON.parse(localStorage.getItem('hair_heat')||'{}');
+    if(s._day!==t){const keep={};for(const k in s){if(s[k]._d===t)keep[k]=s[k]}s._day=t;localStorage.setItem('hair_heat',JSON.stringify(keep));return keep}
+    delete s._day;
+    return s;
+  }catch(e){return{}}
+}
+function recordHeat(style){
+  const s=heat();
+  if(!s[style])s[style]={n:0,_d:new Date().toISOString().slice(0,10)};
+  s[style].n++;s[style]._d=new Date().toISOString().slice(0,10);
+  delete s._day;
+  localStorage.setItem('hair_heat',JSON.stringify(s));
+}
+function heatCount(style){const s=heat();return (s[style]||{}).n||0}
+function hotStyles(){
+  /* 002M-1: 有真实点击的款按次数倒序在前,没点击的按 HOT 原顺序在后 */
+  const counted=CARDS.map(c=>({key:c.key,style:c.rep.style,n:heatCount(c.rep.style)})).filter(x=>x.n>0);
+  counted.sort((a,b)=>b.n-a.n);
+  const rest=HOT.filter(s=>!counted.some(x=>x.style===s));
+  return [...counted.map(x=>x.style),...rest].slice(0,10);
+}
 
 /* ===== 状态 ===== */
 let F={g:'all',len:'all',color:'all',angle:'all'};
@@ -165,10 +201,12 @@ function filtered(){
   const kw=q.value.trim().toLowerCase();
   return CARDS.filter(c=>{
     const d=c.rep;
+    /* 002M-5: 搜索命中 style/name/tags */
+    const hay=(d.style+'/'+d.name+'/'+(d.tags||[]).join('/')).toLowerCase();
     return (F.g==='all'||d.g===F.g)&&(F.len==='all'||d.len===F.len)
       &&(F.color==='all'||c.arr.some(x=>x.color===F.color))
       &&(F.angle==='all'||c.arr.some(x=>x.angle===F.angle))
-      &&(!kw||(d.style+'/'+d.name+'/'+(d.style_desc||'')).toLowerCase().includes(kw));
+      &&(!kw||hay.includes(kw));
   });
 }
 function resetFilters(){F={g:'all',len:'all',color:'all',angle:'all'};renderAll()}
@@ -179,11 +217,39 @@ function renderTop10(){
   const showIt=F.g==='all'&&F.len==='all'&&F.color==='all'&&F.angle==='all'&&!q.value.trim();
   if(!showIt){box.style.display='none';return}
   box.style.display='block';
-  const hot=HOT.map(s=>CARDS.find(c=>c.rep.style===s)).filter(Boolean).slice(0,10);
-  box.innerHTML=`<h3><span class="fire">🔥</span> 本周热门 Top 10</h3>
+  const hot=hotStyles().map(s=>CARDS.find(c=>c.rep.style===s)).filter(Boolean).slice(0,10);
+  box.innerHTML=`<h3><span class="fire">🔥</span> 热门 Top 10 <span style="font-size:12px;color:var(--muted);font-weight:400">${heatCount(hot[0]?.rep.style)>0?'· 按真实浏览次数':'· 编辑精选'}</span></h3>
     <div class="top10row">${hot.map((c,i)=>`
       <div class="topcard" onclick="showGroup('${c.key}')">
         <div class="rank">#${i+1}</div>
+        <img loading="lazy" src="${c.rep.thumb}" alt="">
+        <div class="tname">${c.rep.name}</div>
+      </div>`).join('')}</div>`;
+  /* P2-7 轮播箭头 */
+  const row=document.querySelector('.top10row');
+  row.style.scrollbarWidth='none';row.style.scrollBehavior='smooth';
+  const h3=box.querySelector('h3');
+  const nav=document.createElement('span');
+  nav.style.cssText='float:right;cursor:pointer;user-select:none';
+  nav.innerHTML='<span id="tpL" style="margin-right:10px">←</span><span id="tpR">→</span>';
+  h3.appendChild(nav);
+  const step=row.clientWidth*0.6;
+  document.getElementById('tpL').onclick=()=>row.scrollBy({left:-step});
+  document.getElementById('tpR').onclick=()=>row.scrollBy({left:step});
+}
+
+/* ===== 002M-6: 每周精选 ===== */
+function renderFeature(){
+  const box=document.getElementById('feature');
+  if(!box)return;
+  const now=new Date();
+  const wk='2026-W'+String(Math.ceil(((now-new Date(now.getFullYear(),0,1))/864e5+1)/7)).padStart(2,'0');
+  const f=FEATURES.find(x=>x.week===wk)||FEATURES[0];
+  const items=f.styles.map(s=>CARDS.find(c=>c.rep.style===s)).filter(Boolean).slice(0,8);
+  if(!items.length){box.style.display='none';return}
+  box.innerHTML=`<h3>⭐ 本周精选 · ${f.theme} <span style="font-size:12px;color:var(--muted);font-weight:400">${f.week}</span></h3>
+    <div class="top10row">${items.map(c=>`
+      <div class="topcard" onclick="showGroup('${c.key}')" style="flex-basis:118px">
         <img loading="lazy" src="${c.rep.thumb}" alt="">
         <div class="tname">${c.rep.name}</div>
       </div>`).join('')}</div>`;
@@ -194,26 +260,29 @@ function renderGrid(){
   const sort=document.getElementById('sort').value;
   let list=filtered();
   if(sort==='new')list=[...list].reverse();
-  if(sort==='hot')list=[...list].sort((a,b)=>HOT.indexOf(b.rep.style)-HOT.indexOf(a.rep.style));
+/* P1-3(二轮): 热门优先正序修复 */
+  if(sort==='hot')list=[...list].sort((a,b)=>HOT.indexOf(a.rep.style)-HOT.indexOf(b.rep.style));
   document.getElementById('grid').innerHTML=list.length?list.map(c=>{
     const d=c.rep;
     return `<div class="card" onclick="showGroup('${c.key}')">
       ${c.n>1?`<div class="badge">${c.n} 张</div>`:''}
       <img loading="lazy" src="${d.thumb}" alt="${d.name}">
       <div class="info"><div class="name"><span>${d.name}</span><span class="g">${ZH_G[d.g]}</span></div>
-      <div class="meta">${ZH_LEN[d.len]||d.len} · ${ZH_COLOR[d.color]||d.color}${c.n>1?` · ${c.n} 个变体`:''}</div></div>
+      <div class="meta">${ZH_LEN[d.len]||d.len} · ${ZH_COLOR[d.color]||d.color}${c.n>1?` · ${c.n} 变体`:''} · ${d.date||''}${(d.tags||[]).length?`<br><span style="font-size:11px;opacity:.75">${d.tags.map(t=>'#'+t).join(' ')}</span>`:''}</div></div>
     </div>`}).join(''):'<div class="empty">没有匹配的发型，试试重置筛选</div>';
 }
 function renderAll(){renderFilters();renderTop10();renderGrid()}
 
 /* ===== Lightbox: 同款全变体 ===== */
 function showGroup(key){
+  /* 002M-1: 记录点击热度(每款每天一次) */
+  if(curGroup&&curGroup[0])recordHeat(curGroup[0].style);
   curGroup=GROUPS[key];if(!curGroup)return;
   const d=curGroup[0];
   document.getElementById('lbBig').innerHTML=curGroup.map(x=>
     `<img src="${x.img}" style="cursor:zoom-in" onclick="zoomOne('${x.img}')" title="${ZH_COLOR[x.color]||x.color} · ${ZH_ANGLE[x.angle]||x.angle}" alt="">`).join('');
   document.getElementById('lbname').textContent=`${d.name}（${ZH_G[d.g]}）`;
-  document.getElementById('lbVars').textContent=curGroup.length>1?`${curGroup.length} 个变体 · 点图放大`:'';
+  document.getElementById('lbVars').textContent=(curGroup.length>1?`${curGroup.length} 个变体 · 点图放大 · `:'')+`入库 ${d.date||'—'}`;
   document.getElementById('lbdl').href=d.img;
   lb.classList.add('show');
 }
@@ -223,22 +292,29 @@ const grid=document.getElementById('grid'),q=document.getElementById('q'),lb=doc
 q.oninput=renderAll;
 document.getElementById('sort').onchange=renderGrid;
 lb.onclick=e=>{if(e.target===lb)lb.classList.remove('show')};
-document.onkeydown=e=>{if(e.key==='Escape')lb.classList.remove('show')};
+
+/* P1-4(二轮): Esc 分层关闭——灯箱开着只关灯箱 */
+document.onkeydown=e=>{
+  if(e.key!=='Escape')return;
+  const z=document.getElementById('zoomLayer');
+  if(z){z.remove();return}
+  if(lb.classList.contains('show'))lb.classList.remove('show');
+};
 
 /* 站内二级放大灯箱(P2-8): 点大图不出站 */
 function zoomOne(src){
   const z=document.createElement('div');
+  z.id='zoomLayer';
   z.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.94);z-index:200;display:flex;align-items:center;justify-content:center;cursor:zoom-out';
   z.innerHTML=`<img src="${src}" style="max-width:94vw;max-height:92vh;border-radius:8px">`;
   z.onclick=()=>z.remove();
   document.body.appendChild(z);
-  const esc=e=>{if(e.key==='Escape'){z.remove();document.removeEventListener('keydown',esc)}};
-  document.addEventListener('keydown',esc);
 }
-/* 随机一款(P2-6) */
+/* 随机一款(P2-6) + P2-7(二轮): 加保护防竞态报错 */
 function randomPick(){
-  const k=CARDS[Math.floor(Math.random()*CARDS.length)].key;
-  showGroup(k);
+  if(!CARDS||!CARDS.length)return;
+  const c=CARDS[Math.floor(Math.random()*CARDS.length)];
+  if(c&&c.key)showGroup(c.key);
 }
 
 /* ===== P1-4: 计数口径 = 款数+张数 ===== */
@@ -254,24 +330,6 @@ renderFilters=function(){
 const _origReset=resetFilters;
 resetFilters=function(){q.value='';F={g:'all',len:'all',color:'all',angle:'all'};renderAll()};
 
-/* ===== P2-7: Top10 轮播(左右箭头) ===== */
-const _origRenderTop10=renderTop10;
-renderTop10=function(){
-  _origRenderTop10();
-  const row=document.querySelector('.top10row');
-  if(!row)return;
-  row.style.scrollbarWidth='none';
-  row.style.cssText+=';scroll-behavior:smooth';
-  const h3=document.querySelector('.top10 h3');
-  const nav=document.createElement('span');
-  nav.style.cssText='float:right;cursor:pointer;user-select:none';
-  nav.innerHTML='<span id="tpL" style="margin-right:10px">←</span><span id="tpR">→</span>';
-  h3.appendChild(nav);
-  const step=row.clientWidth*0.6;
-  document.getElementById('tpL').onclick=()=>row.scrollBy({left:-step});
-  document.getElementById('tpR').onclick=()=>row.scrollBy({left:step});
-};
-
 /* URL 参数直通 tryon(P0-2 出站侧) */
 document.getElementById('lbTry').addEventListener('click',e=>{
   if(curGroup&&curGroup[0]){
@@ -279,6 +337,16 @@ document.getElementById('lbTry').addEventListener('click',e=>{
     location.href='./tryon.html?style='+encodeURIComponent(curGroup[0].style);
   }
 });
+/* 002M-3: 首页统计条 */
+function renderStats(){
+  const el=document.getElementById('stats');
+  if(!el)return;
+  const t=new Date().toISOString().slice(0,10);
+  const today=D.filter(d=>d.date===t).length;
+  el.textContent=`📚 全库 ${CARDS.length} 款 / ${D.length} 张`+(today?` · 今日新增 ${today} 张`:' · 数据持续更新');
+}
+const _origRenderAll=renderAll;
+renderAll=function(){_origRenderAll();renderFeature();renderStats()};
 renderAll();
 </script>
 </body>
