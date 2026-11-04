@@ -69,6 +69,9 @@ input:focus{border-color:var(--accent)}
 .lb .big img{max-height:70vh;border-radius:8px;flex:0 0 auto;width:auto}
 .lb .big .vthumb{max-height:26vh;min-height:130px;border-radius:8px;cursor:zoom-in;transition:transform .15s}
 .lb .big .vthumb:hover{transform:scale(1.04)}
+.lb .vwrap{position:relative;display:inline-block;flex:0 0 auto}
+.lb .vzoom{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:6px;padding:3px 7px;font-size:12px;cursor:pointer;opacity:0;transition:opacity .15s}
+.lb .vwrap:hover .vzoom{opacity:1}
 .lb .panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:94vw}
 .lb a,.lb button{color:var(--fg);background:var(--card);border:1px solid var(--border);border-radius:7px;padding:8px 14px;text-decoration:none;font-size:14px;cursor:pointer}
 .lb a:hover,.lb button:hover{border-color:var(--accent)}
@@ -281,12 +284,19 @@ function showGroup(key){
   if(curGroup&&curGroup[0])recordHeat(curGroup[0].style);
   curGroup=GROUPS[key];if(!curGroup)return;
   const d=curGroup[0];
-  document.getElementById('lbBig').innerHTML=curGroup.map(x=>
-    `<img class="vthumb" src="${x.img}" onclick="zoomOne('${x.img}')" title="${ZH_COLOR[x.color]||x.color} · ${ZH_ANGLE[x.angle]||x.angle}" alt="">`).join('');
+  document.getElementById('lbBig').innerHTML=curGroup.map((x,i)=>
+    `<span class="vwrap"><img class="vthumb" src="${x.img}" onclick="goTryon('${x.style}','${x.color||''}')" title="点图：用这款去试发型（${ZH_COLOR[x.color]||x.color} · ${ZH_ANGLE[x.angle]||x.angle}）" alt=""><button class="vzoom" onclick="event.stopPropagation();zoomOne('${x.img}')" title="放大">🔍</button></span>`).join('');
   document.getElementById('lbname').textContent=`${d.name}（${ZH_G[d.g]}）`;
   document.getElementById('lbVars').textContent=(curGroup.length>1?`${curGroup.length} 个变体 · 点图放大 · `:'')+`入库 ${d.date||'—'}`;
   document.getElementById('lbdl').href=d.img;
   lb.classList.add('show');
+}
+
+/* 点变体图 = 带具体款式+发色跳试发型页 */
+function goTryon(style,color){
+  let u='./tryon.html?style='+encodeURIComponent(style);
+  if(color)u+='&color='+encodeURIComponent(color);
+  location.href=u;
 }
 
 /* ===== 事件 ===== */

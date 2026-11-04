@@ -109,10 +109,14 @@ function pickHair(el,style){document.querySelectorAll('.hair-item').forEach(x=>x
 
 // ====== URL 参数预选 (?style=xxx) ======
 (function(){
-  const s=new URLSearchParams(location.search).get('style');
+  const p=new URLSearchParams(location.search);
+  const s=p.get('style');
   if(!s)return;
   const el=document.getElementById('hi-'+s);
   if(el){pickHair(el,s);el.scrollIntoView({block:'center'});setTimeout(()=>el.scrollIntoView({block:'center'}),400)}
+  const c=p.get('color');
+  if(c&&window.buildPrompt){/* 发色提示附加到 prompt 由 buildPrompt 处理;此处仅存标记 */
+    window.__preColor=c;}
 })();
 
 // ====== 上传 ======
@@ -165,7 +169,9 @@ async function showBig(t){const db=await idb();const r=await new Promise(res=>{c
 const DEFAULTS={gemini:'gemini-2.5-flash-image',openai:'gpt-image-1',siliconflow:''};
 function buildPrompt(){
   const d=uniq.find(x=>x.style===hairSel);
-  return `Change ONLY the hairstyle of the person in the first image to match the hairstyle shown in the second reference image: ${d.name} (${d.style}). Keep the face, facial features, skin tone, expression, clothing and background exactly unchanged. Photorealistic result.`+($('extra').value.trim()?'\nAdditional: '+$('extra').value.trim():'');
+  const ZHC={base:'原发色参考',black:'jet black',brown:'chestnut brown',blonde:'golden blonde',silver:'silver grey'};
+  const pc=window.__preColor?` The hair color should be ${ZHC[window.__preColor]||window.__preColor}.`:'';
+  return `Change ONLY the hairstyle of the person in the first image to match the hairstyle shown in the second reference image: ${d.name} (${d.style}).${pc} Keep the face, facial features, skin tone, expression, clothing and background exactly unchanged. Photorealistic result.`+($('extra').value.trim()?'\\nAdditional: '+$('extra').value.trim():'');
 }
 async function generate(){
   busy=true;check();
