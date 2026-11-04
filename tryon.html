@@ -107,6 +107,16 @@ hairList.innerHTML=uniq.map(d=>`
   </div>`).join('');
 function pickHair(el,style){document.querySelectorAll('.hair-item').forEach(x=>x.classList.remove('sel'));el.classList.add('sel');hairSel=style;check();}
 
+/* 选中发型的实际参考图: 有 ?color= 时用对应发色变体,否则 base 代表图 */
+function hairImg(){
+  const list=D.filter(x=>x.style===hairSel);
+  if(window.__preColor){
+    const m=list.find(x=>x.color===window.__preColor);
+    if(m)return m.img;
+  }
+  return hairImg();
+}
+
 // ====== URL 参数预选 (?style=xxx) ======
 (function(){
   const p=new URLSearchParams(location.search);
@@ -200,7 +210,7 @@ async function genGemini(key,model){
     body:JSON.stringify({contents:[{parts:[
       {text:buildPrompt()},
       {inline_data:{mime_type:'image/jpeg',data:faceImg.split(',')[1]}},
-      {inline_data:{mime_type:'image/jpeg',data:imgToB64(uniq.find(x=>x.style===hairSel).img)}},
+      {inline_data:{mime_type:'image/jpeg',data:imgToB64(hairImg())}},
     ]}]}),
   });
   const j=await r.json();
@@ -215,7 +225,7 @@ async function genOpenAI(key,model){
   fd.append('model',model);
   fd.append('prompt',buildPrompt());
   fd.append('image',dataURLtoBlob(faceImg),'face.png');
-  fd.append('image',dataURLtoBlob(await urlToDataURL(uniq.find(x=>x.style===hairSel).img)),'hair.png');
+  fd.append('image',dataURLtoBlob(await urlToDataURL(hairImg())),'hair.png');
   fd.append('size','1024x1536');
   const r=await fetch('https://api.openai.com/v1/images/edits',{method:'POST',headers:{Authorization:`Bearer ${key}`},body:fd});
   const j=await r.json();
@@ -231,7 +241,7 @@ async function genCustom(key,model){
     body:JSON.stringify({model,messages:[{role:'user',content:[
       {type:'text',text:buildPrompt()},
       {type:'image_url',image_url:{url:faceImg}},
-      {type:'image_url',image_url:{url:await urlToDataURL(uniq.find(x=>x.style===hairSel).img)}},
+      {type:'image_url',image_url:{url:await urlToDataURL(hairImg())}},
     ]}]}),
   });
   const j=await r.json();
@@ -257,7 +267,7 @@ async function genCustom(key,model){
 }
 async function genSilicon(key,model){
   if(!model)throw new Error('SiliconFlow 需填写模型名，如 Qwen/Qwen-Image-Edit');
-  const hairB64=await imgToB64(uniq.find(x=>x.style===hairSel).img);
+  const hairB64=await imgToB64(hairImg());
   const r=await fetch('https://api.siliconflow.cn/v1/images/generations',{
     method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${key}`},
     body:JSON.stringify({model,prompt:buildPrompt(),image:hairB64,image_size:'832x1216'}),
