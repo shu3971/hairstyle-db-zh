@@ -123,7 +123,16 @@ function hairImg(){
   const s=p.get('style');
   if(!s)return;
   const el=document.getElementById('hi-'+s);
-  if(el){pickHair(el,s);el.scrollIntoView({block:'center'});setTimeout(()=>el.scrollIntoView({block:'center'}),400)}
+  if(el){
+    pickHair(el,s);
+    // 用选中的发色变体图替换该卡片缩略图,让"选中的那张"可见
+    const c=p.get('color');
+    if(c){
+      const m=D.find(x=>x.style===s&&x.color===c);
+      if(m){el.querySelector('img').src=m.img;el.querySelector('.n').textContent=m.name+' · '+({base:'原色',black:'黑色',brown:'棕色',blonde:'金色',silver:'银灰'}[c]||c)}
+    }
+    el.scrollIntoView({block:'center'});setTimeout(()=>el.scrollIntoView({block:'center'}),400)
+  }
   const c=p.get('color');
   if(c&&window.buildPrompt){/* 发色提示附加到 prompt 由 buildPrompt 处理;此处仅存标记 */
     window.__preColor=c;}
